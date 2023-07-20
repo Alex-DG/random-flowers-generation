@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 class Lights {
   setDirectionalLight() {
-    const directionalLight = new THREE.DirectionalLight('#ffffff', 5.5)
+    const directionalLight = new THREE.DirectionalLight('#ffffff', 6.5)
     directionalLight.position.set(4, 3, 10)
 
     directionalLight.shadow.mapSize.width = 1024 // default

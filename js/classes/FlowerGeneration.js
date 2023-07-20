@@ -19,7 +19,7 @@ class _FlowerGeneration {
       // Generate the flower's points
       const flowerPositions = []
 
-      for (let i = 0; i < 4 * Math.PI; i += 0.008) {
+      for (let i = 0; i < 10 * Math.PI; i += 0.008) {
         const p = i * petals
 
         const noise2D = createNoise2D()
@@ -39,57 +39,69 @@ class _FlowerGeneration {
       // Create the flower
       const flower = new THREE.Line(flowerGeometry, flowerMaterial)
 
+      ///////////
       // Create stem
-      const stemMaterial = new THREE.LineBasicMaterial({
-        color: 0x008000,
-        linewidth: 2,
-      }) // green
-      const stemGeometry = new THREE.BufferGeometry()
-      //   stemGeometry.scale.set(2, 2, 2)
+      const stemMaterial = new THREE.MeshBasicMaterial({ color: 0x008000 }) // green
 
-      const v0 = new THREE.Vector3(0, 0, 0)
-      const v1 = new THREE.Vector3(
-        (Math.random() - 0.5) * 0.5,
-        Math.random() * -2,
-        (Math.random() - 0.5) * 0.5
-      )
-      const v2 = new THREE.Vector3(
-        (Math.random() - 0.5) * 1,
-        Math.random() * -4,
-        (Math.random() - 0.5) * 1
-      )
-      const v3 = new THREE.Vector3(0, -5, 0)
+      // Define parameters for the stem
+      const stemRadius = 0.02 // Radius of the stem
+      const stemSegments = 64 / 8 // Number of segments for the stem geometry
+      const stemHeight = 3 // Height of the stem
 
-      const curve = new THREE.CubicBezierCurve3(v0, v1, v2, v3)
-      const points = curve.getPoints(50)
-      const positions = new Float32Array(points.length * 3)
+      // Generate the points for the bend or spiral effect
+      const generateBendOrSpiralPoints = () => {
+        const points = []
 
-      // Add spiral effect to the stem
-      const spiralFrequency = Math.random() * 0.15 + 0.15 // Randomly adjust the frequency of the spiral
-      const spiralAmplitude = Math.random() * 0.1 + 0.1 // Randomly adjust the amplitude of the spiral
+        const bendAmplitude = 0.1 // Amplitude of the stem bend or spiral
+        const bendFrequency = Math.random() * 0.1 + 0.1 // Frequency of the stem bend or spiral
+        const hasBendOrSpiral = Math.random() < 0.5 // Randomly determine if there will be a bend or a spiral
 
-      for (let i = 0; i < points.length; i++) {
-        const spiralOffset = Math.sin(i * spiralFrequency) * spiralAmplitude
-        positions[i * 3 + 0] = points[i].x + spiralOffset
-        positions[i * 3 + 1] = points[i].y
-        positions[i * 3 + 2] = points[i].z + spiralOffset
+        for (let i = 0; i < stemSegments; i++) {
+          const t = i / (stemSegments - 1)
+          const angle = Math.random() * Math.PI * 2
+          const radius = i / (stemSegments - 1)
+          let x = Math.cos(angle) * radius * bendAmplitude
+          let y = (i / (stemSegments - 1)) * stemHeight
+          let z = Math.sin(angle) * radius * bendAmplitude
+
+          if (hasBendOrSpiral) {
+            const bendOffset =
+              Math.sin(t * bendFrequency * Math.PI) * bendAmplitude
+
+            x += Math.cos(angle) * bendOffset
+            z += Math.sin(angle) * bendOffset
+          }
+
+          points.push(new THREE.Vector3(x, y, z))
+        }
+
+        return points
       }
 
-      stemGeometry.setAttribute(
-        'position',
-        new THREE.BufferAttribute(positions, 3)
+      // Create the stem geometry
+      const stemGeometry = new THREE.TubeGeometry(
+        new THREE.CatmullRomCurve3(generateBendOrSpiralPoints()),
+        stemSegments,
+        stemRadius,
+        4,
+        false
       )
 
-      const stem = new THREE.Line(stemGeometry, stemMaterial)
+      const stem = new THREE.Mesh(stemGeometry, stemMaterial)
+
+      // Update flower position on top of its steam
+      flower.position.y += stemHeight
 
       // Create center sphere
-      const sphereGeometry = new THREE.SphereBufferGeometry(0.15, 8, 8)
+      const sphereRadius = Math.random() * 0.2 + 0.1
+      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 8, 8)
       const sphereMaterial = new THREE.MeshBasicMaterial({
         color: flowerMaterial.color,
         wireframe: true,
       })
       const centerSphere = new THREE.Mesh(sphereGeometry, sphereMaterial)
       flower.add(centerSphere)
+      //   flower.add(stem)
 
       // Create group and add flower and stem to it
       const group = new THREE.Group()
@@ -98,7 +110,6 @@ class _FlowerGeneration {
 
       flower.userData = { offset: Math.random() }
       this.flowers.push(flower)
-      this.stems.push(flower)
 
       return group
     } catch (error) {
@@ -110,10 +121,10 @@ class _FlowerGeneration {
     const { scene } = XR8.Threejs.xrScene()
     const centerX = 0 // X-coordinate of the center of the circle
     const centerY = 0 // Y-coordinate of the center of the circle
-    const radius = 10 // Radius of the circle
+    const radius = 5 // Radius of the circle
 
     // Add flowers to the scene
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 20; i++) {
       const flower = this.createFlower()
 
       // Generate random angle within a circle
@@ -142,8 +153,7 @@ class _FlowerGeneration {
 
     this.flowers?.forEach((f) => {
       const offset = f.userData.offset
-      console.log(offset)
-      f.position.z = (Math.sin(time * 0.0005) * offset) / 2
+      f.position.z = (Math.sin(time * 0.00025) * offset) / 3
       //   f.position.z = f.position.z + Math.sin(time * 0.05) * 0.05
     })
   }
