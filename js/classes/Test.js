@@ -270,6 +270,7 @@ class Generator {
     for (let i = 0; i < this.count; i++) {
       // setup a new walker/wanderer
       let centered = Math.random() > 0.5
+
       let walker = new Walker({
         simplex: this.simplex,
         total: this.vb.get('iterations'),
