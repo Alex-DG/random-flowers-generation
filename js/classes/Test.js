@@ -270,7 +270,6 @@ class Generator {
     for (let i = 0; i < this.count; i++) {
       // setup a new walker/wanderer
       let centered = Math.random() > 0.5
-
       let walker = new Walker({
         simplex: this.simplex,
         total: this.vb.get('iterations'),
@@ -415,8 +414,8 @@ class Generator {
 
   loop() {
     // subtly rotate the mesh
-    this.meshGroup.rotation.x = Math.cos(Date.now() * 0.001) * 0.1
-    this.meshGroup.rotation.y = Math.sin(Date.now() * 0.001) * -0.1
+    // this.meshGroup.rotation.x = Math.cos(Date.now() * 0.001) * 0.1;
+    // this.meshGroup.rotation.y = Math.sin(Date.now() * 0.001) * -0.1;
 
     // handle all the funky progress math
     // there is a cleaner way of doing this, I'll find it

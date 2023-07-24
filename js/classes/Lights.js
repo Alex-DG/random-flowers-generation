@@ -15,7 +15,7 @@ class Lights {
   }
 
   setAmbientLight() {
-    const ambientLight = new THREE.AmbientLight('#ffffff', 1)
+    const ambientLight = new THREE.AmbientLight('#ffffff', 0.7)
 
     this.scene.add(ambientLight)
   }

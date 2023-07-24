@@ -19,6 +19,13 @@ export const initThreeScenePipelineModule = () => {
       facing: camera.quaternion,
     })
 
+    // export const NoToneMapping: ToneMapping;
+    // export const LinearToneMapping: ToneMapping;
+    // export const ReinhardToneMapping: ToneMapping;
+    // export const CineonToneMapping: ToneMapping;
+    // export const ACESFilmicToneMapping: ToneMapping;
+    // export const CustomToneMapping: ToneMapping;
+
     // Renderer
     const renderer = new THREE.WebGLRenderer({
       canvas,
@@ -32,10 +39,10 @@ export const initThreeScenePipelineModule = () => {
 
     renderer.alpha = true
     renderer.antialias = true
-    renderer.physicallyCorrectLights = true
-    renderer.outputEncoding = THREE.sRGBEncoding
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.0
+    // renderer.physicallyCorrectLights = true
+    // renderer.outputEncoding = THREE.sRGBEncoding
+    // renderer.toneMapping = THREE.ACESFilmicToneMapping
+    // renderer.toneMappingExposure = 1.72
 
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap

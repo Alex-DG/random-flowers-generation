@@ -1,10 +1,30 @@
 import * as THREE from 'three'
-import { MeshLine, MeshLineMaterial } from 'three.meshline'
+
+import { MeshLineGeometry, MeshLineMaterial, raycast } from 'meshline'
 
 import { createNoise2D, createNoise3D } from 'simplex-noise'
 import { getRandomSpherePoint } from '../utils/maths'
 
 import DebugTweakpane from './DebugTweakpane'
+
+function easeInExpo(t, b, c, d) {
+  return t == 0 ? b : c * Math.pow(2, 10 * (t / d - 1)) + b
+}
+
+function easeOutExpo(t, b, c, d) {
+  return t == d ? b + c : c * (-Math.pow(2, (-10 * t) / d) + 1) + b
+}
+
+function easeInOutExpo(t, b, c, d) {
+  if (t == 0) return b
+  if (t == d) return b + c
+  if ((t /= d / 2) < 1) return (c / 2) * Math.pow(2, 10 * (t - 1)) + b
+  return (c / 2) * (-Math.pow(2, -10 * --t) + 2) + b
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max)
+}
 
 const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   return (
@@ -85,8 +105,8 @@ class _FlowerGeneration {
     // this.meshGroup.position.y = 2.5
     // this.meshGroup.rotateX(-Math.PI / 2)
 
-    this.meshGroupScale = 0.1
-    this.meshGroupScaleTarget = 0.1
+    this.meshGroupScale = 1
+    this.meshGroupScaleTarget = 1
 
     this.scene.add(this.meshGroup)
 
@@ -118,6 +138,8 @@ class _FlowerGeneration {
   ////////////////////////////////////////////////////////////////////////
 
   randomize() {
+    this.isReady = false
+
     // empty out meshes array
     if (this.meshes) {
       this.meshes.length = 0
@@ -190,10 +212,10 @@ class _FlowerGeneration {
         time: i * 1000,
       })
 
-      let geometry = new THREE.BufferGeometry()
+      let flowerGeometry = new THREE.BufferGeometry()
       const positions = new Float32Array(walker.path.length * 3)
 
-      // grab each path point and push it to the geometry
+      // grab each path point and push it to the flowerGeometry
       for (let j = 0, len = walker.path.length; j < len; j++) {
         let p = walker.path[j]
         let x = p.x
@@ -206,36 +228,29 @@ class _FlowerGeneration {
         positions[j * 3 + 1] = y
         positions[j * 3 + 2] = z
       }
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+      flowerGeometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
+      )
 
-      let lineMaterial = new THREE.LineBasicMaterial({
+      const lineRibbonGeometry = new MeshLineGeometry()
+      lineRibbonGeometry.setPoints(flowerGeometry)
+
+      const lineRibbonMaterial = new MeshLineMaterial({
+        useMap: true,
+        map: this.strokeMap,
         color: new THREE.Color(
           `hsl(${
             360 * Math.random() + 300 + calcMap(i, 0, this.count, -350, 350)
           }, 100%, ${74}%)`
         ),
-        linewidth: 4,
-        depthTest: false,
+        lineWidth: 0.09,
+        sizeAttenuation: 1,
         opacity: 1,
         transparent: true,
       })
 
-      const lineRibbon = new MeshLine()
-      lineRibbon.setGeometry(geometry)
-
-      const lineRibbonMaterial = new MeshLineMaterial({
-        useMap: true,
-        map: this.strokeMap,
-        color: lineMaterial.color,
-        lineWidth: 0.1,
-        // sizeAttenuation: 1,
-        opacity: 1,
-        transparent: true,
-        // side: THREE.DoubleSide,
-        // blending: THREE.AdditiveBlending,
-      })
-
-      const ribbon = new THREE.Mesh(lineRibbon.geometry, lineRibbonMaterial)
+      const ribbon = new THREE.Mesh(lineRibbonGeometry, lineRibbonMaterial)
 
       // create meshes for all of the stems/reflections
       for (let k = 0; k < this.stems; k++) {
@@ -246,6 +261,10 @@ class _FlowerGeneration {
         mesh.position.y = 4
         mesh.scale.multiplyScalar(0.1)
         mesh.name = `flower-${k}`
+
+        // TODO TWEEN on visibility value
+        // mesh.material.uniforms.opacity.value = 1
+        // mesh.material.uniforms.visibility.value = 0.4
 
         this.meshes.push(mesh)
         this.meshGroup.add(mesh)
@@ -306,19 +325,21 @@ class _FlowerGeneration {
     )
 
     // const stem = new THREE.Line(stemGeometry, stemMaterial)
-    const stemLine = new MeshLine()
-    stemLine.setGeometry(stemGeometry)
+    // const stemLine = new MeshLine()
+    // stemLine.setGeometry(stemGeometry)
+    const lineStemGeometry = new MeshLineGeometry()
+    lineStemGeometry.setPoints(stemGeometry)
 
     const stemLineMaterial = new MeshLineMaterial({
       useMap: true,
       map: this.strokeMap,
       color: stemMaterial.color,
-      lineWidth: 0.1,
+      lineWidth: 0.25,
       sizeAttenuation: 1,
       opacity: 1,
       transparent: true,
     })
-    const stem = new THREE.Mesh(stemLine.geometry, stemLineMaterial)
+    const stem = new THREE.Mesh(lineStemGeometry, stemLineMaterial)
     stem.name = 'stem'
 
     this.meshGroup.add(stem)
@@ -327,6 +348,8 @@ class _FlowerGeneration {
   generate() {
     this.generateFlower()
     this.generateStem()
+
+    this.isReady = true
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -337,6 +360,8 @@ class _FlowerGeneration {
 
   async init() {
     this.bind()
+
+    this.isReady = false
 
     const { scene } = XR8.Threejs.xrScene()
     this.scene = scene
