@@ -254,8 +254,19 @@ class _FlowerGeneration {
   }
 
   generateStem() {
+    // Start with a base hue of 120 (green) and adjust it slightly.
+    let h = 120 + (Math.random() * 20 - 10)
+    // Keep saturation somewhat high (30-60) to ensure the color stays green.
+    let s = 30 + Math.random() * 30
+    // Keep lightness in the upper half of the range (50-80) to ensure the color isn't too dark.
+    let l = 50 + Math.random() * 30
+
+    // stem color
+    const stemColor = `hsl(${h},${s}%,${l}%)`
+
     const stemMaterial = new THREE.LineBasicMaterial({
-      color: '#7fbf7f',
+      color: stemColor,
+      // color: '#0fbf7f',
       linewidth: 2,
     })
 
