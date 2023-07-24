@@ -75,145 +75,15 @@ class Walker {
 }
 
 class _FlowerGeneration {
-  createFlower() {
-    // Create the noise generator
-    try {
-      // Define geometry and material for the flower
-      const flowerGeometry = new THREE.BufferGeometry()
-      const flowerMaterial = new THREE.LineBasicMaterial({
-        color: Math.random() * 0xffffff,
-      })
-
-      // Define the characteristics of the flower
-      const petals = Math.round(Math.random() * 5) + 4
-      const radius = Math.random()
-      const height = (Math.random() - 0.5) * 2
-
-      // Generate the flower's points
-      const flowerPositions = []
-
-      for (let i = 0; i < 10 * Math.PI; i += 0.008) {
-        const p = i * petals
-
-        const noise2D = createNoise2D()
-        // const noise3D = createNoise3D()
-        const r = (1 + noise2D(radius * Math.cos(p), radius * Math.sin(p))) / 2
-        const x = r * Math.cos(i)
-        const y = r * Math.sin(i)
-        const z = height * Math.sin(i)
-        flowerPositions.push(x, y, z)
-      }
-
-      flowerGeometry.setAttribute(
-        'position',
-        new THREE.Float32BufferAttribute(flowerPositions, 3)
-      )
-
-      // Create the flower
-      const flower = new THREE.Line(flowerGeometry, flowerMaterial)
-
-      ///////////
-      // Create stem
-      const stemMaterial = new THREE.MeshBasicMaterial({ color: 0x008751 }) // green
-
-      // Define parameters for the stem
-      const stemRadius = 0.02 // Radius of the stem
-      const stemSegments = 64 / 8 // Number of segments for the stem geometry
-      const stemHeight = 3 // Height of the stem
-
-      // Generate the points for the bend or spiral effect
-      const generateBendOrSpiralPoints = () => {
-        const points = []
-
-        const bendAmplitude = 0.1 // Amplitude of the stem bend or spiral
-        const bendFrequency = Math.random() * 0.1 + 0.1 // Frequency of the stem bend or spiral
-        const hasBendOrSpiral = Math.random() < 0.5 // Randomly determine if there will be a bend or a spiral
-
-        for (let i = 0; i < stemSegments; i++) {
-          const t = i / (stemSegments - 1)
-          const angle = Math.random() * Math.PI * 2
-          const radius = i / (stemSegments - 1)
-          let x = Math.cos(angle) * radius * bendAmplitude
-          let y = (i / (stemSegments - 1)) * stemHeight
-          let z = Math.sin(angle) * radius * bendAmplitude
-
-          if (hasBendOrSpiral) {
-            const bendOffset =
-              Math.sin(t * bendFrequency * Math.PI) * bendAmplitude
-
-            x += Math.cos(angle) * bendOffset
-            z += Math.sin(angle) * bendOffset
-          }
-
-          points.push(new THREE.Vector3(x, y, z))
-        }
-
-        return points
-      }
-
-      // Create the stem geometry
-      const stemGeometry = new THREE.TubeGeometry(
-        new THREE.CatmullRomCurve3(generateBendOrSpiralPoints()),
-        stemSegments,
-        stemRadius,
-        4,
-        false
-      )
-
-      const stem = new THREE.Mesh(stemGeometry, stemMaterial)
-
-      // Update flower position on top of its steam
-      flower.position.y += stemHeight
-
-      // Create center sphere
-      const sphereRadius = Math.random() * 0.2 + 0.1
-      const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 8, 8)
-      const sphereMaterial = new THREE.MeshBasicMaterial({
-        color: flowerMaterial.color,
-        wireframe: true,
-      })
-      const centerSphere = new THREE.Mesh(sphereGeometry, sphereMaterial)
-      flower.add(centerSphere)
-      //   flower.add(stem)
-
-      // Create group and add flower and stem to it
-      const group = new THREE.Group()
-      group.add(flower)
-      group.add(stem)
-
-      flower.userData = { offset: Math.random() }
-      this.flowers.push(flower)
-
-      return group
-    } catch (error) {
-      console.log({ error })
-    }
-  }
-
-  addFlowers() {
-    const { scene } = XR8.Threejs.xrScene()
-    const radius = 4 // Radius of the circle
-
-    // Add flowers to the scene
-    for (let i = 0; i < 15; i++) {
-      const flower = this.createFlower()
-
-      const position = getRandomSpherePoint(flower.position, radius, true)
-      flower.position.copy(position)
-      flower.rotation.y = Math.random() * (Math.PI * 2)
-      scene.add(flower)
-    }
-  }
-
   ////////////////////////////////////////////////////////////////////////
 
   setupLines() {
     this.meshes = []
     this.meshGroup = new THREE.Group()
 
-    this.meshGroup.scale.multiplyScalar(0.15)
-    this.meshGroup.position.y = 2.5
-    this.meshGroup.rotateX(-Math.PI / 2)
+    // this.meshGroup.scale.multiplyScalar(0.1)
+    // this.meshGroup.position.y = 2.5
+    // this.meshGroup.rotateX(-Math.PI / 2)
 
     this.meshGroupScale = 0.1
     this.meshGroupScaleTarget = 0.1
@@ -240,28 +110,21 @@ class _FlowerGeneration {
     // this.folderGenerate.addInput(this.meshGroup, 'rotate')
   }
 
-  async setupStroke() {
+  async setupTexture() {
     const textureLoader = new THREE.TextureLoader()
     this.strokeMap = await textureLoader.loadAsync('/textures/stroke.png')
   }
 
-  worldToScreen(vector, camera) {
-    vector.project(camera)
-    let cx = window.innerWidth / 2
-    let cy = window.innerHeight / 2
-    vector.x = vector.x * cx + cx
-    vector.y = -(vector.y * cy) + cy
-    return vector
-  }
+  ////////////////////////////////////////////////////////////////////////
 
-  reset() {
+  randomize() {
     // empty out meshes array
     if (this.meshes) {
       this.meshes.length = 0
     }
 
     // remove all children from mesh group
-    if (this.meshGroup) {
+    if (this.meshGroup && this.meshGroup.children.length) {
       while (this.meshGroup.children.length) {
         this.meshGroup.remove(this.meshGroup.children[0])
       }
@@ -275,6 +138,8 @@ class _FlowerGeneration {
     this.progressEased = 0 // eased progress
 
     this.generate()
+
+    console.log({ group: this.meshGroup })
 
     // requestAnimationFrame(() => {
     //   // scale until the flower roughly fits within the viewport
@@ -300,7 +165,7 @@ class _FlowerGeneration {
     // })
   }
 
-  generate() {
+  generateFlower() {
     const noise2D = createNoise2D()
 
     this.count = 8
@@ -362,8 +227,8 @@ class _FlowerGeneration {
         useMap: true,
         map: this.strokeMap,
         color: lineMaterial.color,
-        lineWidth: 0.08,
-        sizeAttenuation: 1,
+        lineWidth: 0.1,
+        // sizeAttenuation: 1,
         opacity: 1,
         transparent: true,
         // side: THREE.DoubleSide,
@@ -372,47 +237,50 @@ class _FlowerGeneration {
 
       const ribbon = new THREE.Mesh(lineRibbon.geometry, lineRibbonMaterial)
 
-      //   let line = new THREE.Line(geometry, lineMaterial)
-
       // create meshes for all of the stems/reflections
       for (let k = 0; k < this.stems; k++) {
         let mesh = ribbon.clone()
-        // let mesh =  line.clone()
+
         mesh.rotation.z = calcMap(k, 0, this.stems, 0, Math.PI * 2)
-        // mesh.rotateX(MAth.PI / 2)
+        mesh.rotation.x = -Math.PI / 2
+        mesh.position.y = 4
+        mesh.scale.multiplyScalar(0.1)
+        mesh.name = `flower-${k}`
 
         this.meshes.push(mesh)
         this.meshGroup.add(mesh)
       }
     }
+  }
 
+  generateStem() {
     const stemMaterial = new THREE.LineBasicMaterial({
-      color: 0x008126,
+      color: '#7fbf7f',
       linewidth: 2,
-    }) // green
+    })
+
     const stemGeometry = new THREE.BufferGeometry()
-    //   stemGeometry.scale.set(2, 2, 2)
 
     const v0 = new THREE.Vector3(0, 0, 0)
     const v1 = new THREE.Vector3(
       (Math.random() - 0.5) * 0.5,
-      Math.random() * -2,
+      Math.random() * 2, //
       (Math.random() - 0.5) * 0.5
     )
     const v2 = new THREE.Vector3(
       (Math.random() - 0.5) * 1,
-      Math.random() * -4,
+      Math.random() * 4,
       (Math.random() - 0.5) * 1
     )
-    const v3 = new THREE.Vector3(0, -5, 0)
+    const v3 = new THREE.Vector3(0, 4, 0)
 
     const curve = new THREE.CubicBezierCurve3(v0, v1, v2, v3)
-    const points = curve.getPoints(50)
+    const points = curve.getPoints(80)
     const positions = new Float32Array(points.length * 3)
 
     // Add spiral effect to the stem
     const spiralFrequency = Math.random() * 0.15 + 0.15 // Randomly adjust the frequency of the spiral
-    const spiralAmplitude = Math.random() * 0.1 + 0.1 // Randomly adjust the amplitude of the spiral
+    const spiralAmplitude = Math.random() * 0.15 + 0.15 // Randomly adjust the amplitude of the spiral
 
     for (let i = 0; i < points.length; i++) {
       const spiralOffset = Math.sin(i * spiralFrequency) * spiralAmplitude
@@ -434,60 +302,67 @@ class _FlowerGeneration {
       useMap: true,
       map: this.strokeMap,
       color: stemMaterial.color,
-      lineWidth: 0.08,
+      lineWidth: 0.1,
       sizeAttenuation: 1,
       opacity: 1,
       transparent: true,
-      // side: THREE.DoubleSide,
-      // blending: THREE.AdditiveBlending,
     })
     const stem = new THREE.Mesh(stemLine.geometry, stemLineMaterial)
+    stem.name = 'stem'
 
     this.meshGroup.add(stem)
+  }
+
+  generate() {
+    this.generateFlower()
+    this.generateStem()
   }
 
   ////////////////////////////////////////////////////////////////////////
 
   bind() {
-    this.reset = this.reset.bind(this)
+    this.randomize = this.randomize.bind(this)
   }
 
   async init() {
     this.bind()
 
-    // this.flowers = []
-    // this.stems = []
-    // this.addFlowers()
     const { scene } = XR8.Threejs.xrScene()
     this.scene = scene
 
     this.folderGenerate = DebugTweakpane.addFolder({ title: 'Flower' })
 
     try {
-      await this.setupStroke()
+      await this.setupTexture()
+
       this.setupLines()
+
       this.generate()
     } catch (error) {
       console.log({ error })
     }
 
     const resetBtn = this.folderGenerate.addButton({
-      title: 'reset',
+      title: 'randomize',
       label: 'generate',
     })
-    resetBtn.on('click', this.reset)
+    resetBtn.on('click', this.randomize)
+
+    // test
+    // const box = new THREE.Mesh(
+    //   new THREE.BoxGeometry(1, 1, 1),
+    //   new THREE.MeshNormalMaterial()
+    // )
+    // box.position.set(0, 0, 0)
+    // this.meshGroup.add(box)
   }
 
   update() {
-    // const time = performance.now()
-    // this.flowers?.forEach((f) => {
-    //   const offset = f.userData.offset
-    //   f.position.z = (Math.sin(time * 0.00025) * offset) / 3
-    //   //   f.position.z = f.position.z + Math.sin(time * 0.05) * 0.05
-    // })
+    const time = performance.now() / 1000
 
     if (this.meshGroup) {
-      this.meshGroup.rotation.z += 0.01
+      this.meshGroup.rotation.y += 0.005
+      this.meshGroup.position.y = Math.sin(time) * 0.1
     }
   }
 }
