@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 
+import gsap from 'gsap'
+
 import { MeshLineGeometry, MeshLineMaterial, raycast } from 'meshline'
 
 import { createNoise2D, createNoise3D } from 'simplex-noise'
@@ -247,6 +249,7 @@ class _FlowerGeneration {
         lineWidth: 0.09,
         sizeAttenuation: 1,
         opacity: 1,
+        depthTest: false,
         transparent: true,
       })
 
@@ -258,13 +261,16 @@ class _FlowerGeneration {
 
         mesh.rotation.z = calcMap(k, 0, this.stems, 0, Math.PI * 2)
         mesh.rotation.x = -Math.PI / 2
-        mesh.position.y = 4
-        mesh.scale.multiplyScalar(0.1)
+        mesh.position.y = 0
+        mesh.scale.multiplyScalar(0.15)
         mesh.name = `flower-${k}`
+        mesh.castShadow = true
 
         // TODO TWEEN on visibility value
         // mesh.material.uniforms.opacity.value = 1
-        // mesh.material.uniforms.visibility.value = 0.4
+        mesh.material.uniforms.visibility.value = 0
+
+        this.flowers.push(mesh)
 
         this.meshes.push(mesh)
         this.meshGroup.add(mesh)
@@ -324,9 +330,6 @@ class _FlowerGeneration {
       new THREE.BufferAttribute(positions, 3)
     )
 
-    // const stem = new THREE.Line(stemGeometry, stemMaterial)
-    // const stemLine = new MeshLine()
-    // stemLine.setGeometry(stemGeometry)
     const lineStemGeometry = new MeshLineGeometry()
     lineStemGeometry.setPoints(stemGeometry)
 
@@ -339,15 +342,47 @@ class _FlowerGeneration {
       opacity: 1,
       transparent: true,
     })
+    stemLineMaterial.uniforms.visibility.value = 0
+
     const stem = new THREE.Mesh(lineStemGeometry, stemLineMaterial)
+    stem.castShadow = true
     stem.name = 'stem'
+
+    this.stem = stem
 
     this.meshGroup.add(stem)
   }
 
+  grow() {
+    gsap.to(this.stem.material.uniforms.visibility, {
+      value: 1,
+      duration: 10,
+      ease: 'power3.out',
+      onComplete: () => {
+        console.log(this.stemLineMaterial.uniforms)
+      },
+    })
+
+    this.flowers.forEach((f) => {
+      gsap.to(f.material.uniforms.visibility, {
+        value: 1,
+        duration: 15,
+        ease: 'power3.out',
+      })
+      gsap.to(f.position, {
+        y: 4,
+        duration: 10,
+        ease: 'power3.out',
+      })
+    })
+  }
+
   generate() {
     this.generateFlower()
+
     this.generateStem()
+
+    this.grow()
 
     this.isReady = true
   }
@@ -362,6 +397,9 @@ class _FlowerGeneration {
     this.bind()
 
     this.isReady = false
+
+    this.flowers = []
+    this.stem = null
 
     const { scene } = XR8.Threejs.xrScene()
     this.scene = scene
