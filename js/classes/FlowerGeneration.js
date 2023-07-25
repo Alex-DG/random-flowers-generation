@@ -247,9 +247,9 @@ class _FlowerGeneration {
           }, 100%, ${74}%)`
         ),
         lineWidth: 0.09,
+        depthTest: false,
         sizeAttenuation: 1,
         opacity: 1,
-        depthTest: false,
         transparent: true,
       })
 
@@ -358,9 +358,6 @@ class _FlowerGeneration {
       value: 1,
       duration: 10,
       ease: 'power3.out',
-      onComplete: () => {
-        console.log(this.stemLineMaterial.uniforms)
-      },
     })
 
     this.flowers.forEach((f) => {
@@ -368,6 +365,10 @@ class _FlowerGeneration {
         value: 1,
         duration: 15,
         ease: 'power3.out',
+        onComplete: () => {
+          f.material.depthTest = true
+          f.material.needsUpdate = true
+        },
       })
       gsap.to(f.position, {
         y: 4,
