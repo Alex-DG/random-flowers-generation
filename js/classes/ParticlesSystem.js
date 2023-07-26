@@ -41,7 +41,7 @@ class _ParticlesSystem {
   }
 
   init(options) {
-    this.options = options?.count || { count: 600 }
+    this.options = options?.count || { count: 150 }
     this.setInstance()
   }
 

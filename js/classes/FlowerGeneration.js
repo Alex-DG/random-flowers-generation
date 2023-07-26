@@ -9,25 +9,6 @@ import { getRandomSpherePoint } from '../utils/maths'
 
 import DebugTweakpane from './DebugTweakpane'
 
-function easeInExpo(t, b, c, d) {
-  return t == 0 ? b : c * Math.pow(2, 10 * (t / d - 1)) + b
-}
-
-function easeOutExpo(t, b, c, d) {
-  return t == d ? b + c : c * (-Math.pow(2, (-10 * t) / d) + 1) + b
-}
-
-function easeInOutExpo(t, b, c, d) {
-  if (t == 0) return b
-  if (t == d) return b + c
-  if ((t /= d / 2) < 1) return (c / 2) * Math.pow(2, 10 * (t - 1)) + b
-  return (c / 2) * (-Math.pow(2, -10 * --t) + 2) + b
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max)
-}
-
 const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   return (
     ((value - inputMin) * (outputMax - outputMin)) / (inputMax - inputMin) +
@@ -99,39 +80,6 @@ class Walker {
 class _FlowerGeneration {
   ////////////////////////////////////////////////////////////////////////
 
-  setupLines() {
-    this.meshes = []
-    this.meshGroup = new THREE.Group()
-
-    // this.meshGroup.scale.multiplyScalar(0.1)
-    // this.meshGroup.position.y = 2.5
-    // this.meshGroup.rotateX(-Math.PI / 2)
-
-    this.meshGroupScale = 1
-    this.meshGroupScaleTarget = 1
-
-    this.scene.add(this.meshGroup)
-
-    // folder.addInput(renderer, 'toneMappingExposure', {
-    //   min: 0,
-    //   max: 4,
-    //   step: 0.01,
-    // })
-
-    this.folderGenerate
-      .addInput({ scale: this.meshGroup.scale.x }, 'scale', {
-        min: 0,
-        max: 10,
-        step: 0.01,
-      })
-      .on('change', ({ value }) => {
-        this.meshGroup.scale.set(value, value, value)
-      })
-
-    // this.folderGenerate.addInput(this.meshGroup, 'scale')
-    // this.folderGenerate.addInput(this.meshGroup, 'rotate')
-  }
-
   async setupTexture() {
     const textureLoader = new THREE.TextureLoader()
     this.strokeMap = await textureLoader.loadAsync('/textures/stroke.png')
@@ -140,56 +88,21 @@ class _FlowerGeneration {
   ////////////////////////////////////////////////////////////////////////
 
   randomize() {
-    this.isReady = false
-
-    // empty out meshes array
-    if (this.meshes) {
-      this.meshes.length = 0
-    }
-
     // remove all children from mesh group
     if (this.meshGroup && this.meshGroup.children.length) {
-      while (this.meshGroup.children.length) {
-        this.meshGroup.remove(this.meshGroup.children[0])
-      }
+      this.meshGroup.children.forEach((child) => {
+        child.userData.flowers.length = 0
+        while (child.children.length) {
+          child.remove(child.children[0])
+        }
+      })
     }
 
-    // initialize progres values
-    this.progress = 0 // overall progress ticker
-    this.progressed = false // has run once
-    this.progressModulo = 0 // resets progress on modulus
-    this.progressEffective = 0 // progress amount to use
-    this.progressEased = 0 // eased progress
-
-    this.generate()
-
-    console.log({ group: this.meshGroup })
-
-    // requestAnimationFrame(() => {
-    //   // scale until the flower roughly fits within the viewport
-    //   let tick = 0
-    //   let exit = 50
-    //   let scale = 1
-    //   this.meshGroup.scale.set(scale, scale, scale)
-    //   let scr = this.worldToScreen(
-    //     new THREE.Vector3(0, this.edge, 0),
-    //     this.camera
-    //   )
-
-    //   const { camera } = XR8.Threejs.xrScene()
-    //   while (scr.y < window.innerHeight * 0.2 && tick <= exit) {
-    //     scale -= 0.05
-    //     scr = this.worldToScreen(
-    //       new THREE.Vector3(0, this.edge * scale, 0),
-    //       camera
-    //     )
-    //     tick++
-    //   }
-    //   this.meshGroupScaleTarget = scale
-    // })
+    this.manyFlowers()
   }
 
-  generateFlower() {
+  generateFlower(flowerGroup) {
+    const flowers = []
     const noise2D = createNoise2D()
 
     this.count = 8
@@ -267,18 +180,18 @@ class _FlowerGeneration {
         mesh.castShadow = true
 
         // TODO TWEEN on visibility value
-        // mesh.material.uniforms.opacity.value = 1
+        // mesh.material.uniforms.opacity.value = 0
         mesh.material.uniforms.visibility.value = 0
 
-        this.flowers.push(mesh)
-
-        this.meshes.push(mesh)
-        this.meshGroup.add(mesh)
+        flowers.push(mesh)
+        flowerGroup.add(mesh)
       }
     }
+
+    return flowers
   }
 
-  generateStem() {
+  generateStem(flowerGroup, growHeight) {
     // Start with a base hue of 120 (green) and adjust it slightly.
     let h = 120 + (Math.random() * 20 - 10)
     // Keep saturation somewhat high (30-60) to ensure the color stays green.
@@ -308,7 +221,7 @@ class _FlowerGeneration {
       Math.random() * 4,
       (Math.random() - 0.5) * 1
     )
-    const v3 = new THREE.Vector3(0, 4, 0)
+    const v3 = new THREE.Vector3(0, growHeight, 0)
 
     const curve = new THREE.CubicBezierCurve3(v0, v1, v2, v3)
     const points = curve.getPoints(80)
@@ -340,6 +253,7 @@ class _FlowerGeneration {
       lineWidth: 0.25,
       sizeAttenuation: 1,
       opacity: 1,
+      // depthTest: false,
       transparent: true,
     })
     stemLineMaterial.uniforms.visibility.value = 0
@@ -348,44 +262,51 @@ class _FlowerGeneration {
     stem.castShadow = true
     stem.name = 'stem'
 
-    this.stem = stem
-
-    this.meshGroup.add(stem)
+    flowerGroup.add(stem)
+    return stem
   }
 
-  grow() {
-    gsap.to(this.stem.material.uniforms.visibility, {
+  grow(flowers, stem, growHeight, growSpeed) {
+    gsap.to(stem.material.uniforms.visibility, {
       value: 1,
-      duration: 10,
+      duration: growSpeed - growSpeed / 10,
       ease: 'power3.out',
     })
 
-    this.flowers.forEach((f) => {
+    flowers.forEach((f) => {
       gsap.to(f.material.uniforms.visibility, {
         value: 1,
-        duration: 15,
+        duration: 10,
         ease: 'power3.out',
         onComplete: () => {
           f.material.depthTest = true
-          f.material.needsUpdate = true
         },
       })
+
       gsap.to(f.position, {
-        y: 4,
-        duration: 10,
+        y: growHeight,
+        duration: growSpeed,
         ease: 'power3.out',
       })
     })
   }
 
   generate() {
-    this.generateFlower()
+    const flowerGroup = new THREE.Group()
 
-    this.generateStem()
+    const growHeight = THREE.MathUtils.randFloat(3, 8)
+    const growSpeed = THREE.MathUtils.randInt(5, 10)
 
-    this.grow()
+    const flowers = this.generateFlower(flowerGroup)
+    const stem = this.generateStem(flowerGroup, growHeight)
 
-    this.isReady = true
+    this.grow(flowers, stem, growHeight, growSpeed)
+
+    flowerGroup.userData.flowers = flowers
+
+    this.meshGroup.add(flowerGroup)
+
+    return flowerGroup
   }
 
   ////////////////////////////////////////////////////////////////////////
@@ -397,25 +318,21 @@ class _FlowerGeneration {
   async init() {
     this.bind()
 
-    this.isReady = false
+    const { scene } = XR8.Threejs.xrScene()
+
+    this.meshGroup = new THREE.Group()
 
     this.flowers = []
     this.stem = null
 
-    const { scene } = XR8.Threejs.xrScene()
     this.scene = scene
+    this.scene.add(this.meshGroup)
 
     this.folderGenerate = DebugTweakpane.addFolder({ title: 'Flower' })
 
-    try {
-      await this.setupTexture()
+    await this.setupTexture()
 
-      this.setupLines()
-
-      this.generate()
-    } catch (error) {
-      console.log({ error })
-    }
+    this.manyFlowers()
 
     const resetBtn = this.folderGenerate.addButton({
       title: 'randomize',
@@ -432,12 +349,32 @@ class _FlowerGeneration {
     // this.meshGroup.add(box)
   }
 
+  manyFlowers(length = THREE.MathUtils.randInt(3, 10)) {
+    for (let i = 0; i < length; i++) {
+      const flowerGroup = this.generate()
+
+      // Compute a random angle
+      let angle = Math.random() * Math.PI * 2
+      // Compute a random distance from the center, but no more than 5 units
+      let radius = 5 * Math.sqrt(Math.random())
+
+      // Convert polar coordinates to Cartesian coordinates
+      let x = radius * Math.cos(angle)
+      let z = radius * Math.sin(angle)
+
+      // Set the flowerGroup's position
+      flowerGroup.position.set(x, 0, z)
+    }
+  }
+
   update() {
     const time = performance.now() / 1000
 
     if (this.meshGroup) {
-      this.meshGroup.rotation.y += 0.005
-      this.meshGroup.position.y = Math.sin(time) * 0.1
+      this.meshGroup.children.forEach((child) => {
+        child.rotation.y += 0.005
+        child.position.y = Math.sin(time) * 0.1
+      })
     }
   }
 }
