@@ -7,7 +7,7 @@ import { MeshLineGeometry, MeshLineMaterial, raycast } from 'meshline'
 import { createNoise2D, createNoise3D } from 'simplex-noise'
 import { getRandomSpherePoint } from '../utils/maths'
 
-import DebugTweakpane from './DebugTweakpane'
+// import DebugTweakpane from './DebugTweakpane'
 
 const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   return (
@@ -318,9 +318,11 @@ class _FlowerGeneration {
   async init() {
     this.bind()
 
-    const { scene } = XR8.Threejs.xrScene()
+    const { scene, renderer } = XR8.Threejs.xrScene()
 
     this.meshGroup = new THREE.Group()
+
+    this.hasStarted = false
 
     this.flowers = []
     this.stem = null
@@ -328,17 +330,27 @@ class _FlowerGeneration {
     this.scene = scene
     this.scene.add(this.meshGroup)
 
-    this.folderGenerate = DebugTweakpane.addFolder({ title: 'Flower' })
+    // this.folderGenerate = DebugTweakpane.addFolder({ title: 'Flower' })
 
     await this.setupTexture()
 
-    this.manyFlowers()
+    // this.manyFlowers()
 
-    const resetBtn = this.folderGenerate.addButton({
-      title: 'randomize',
-      label: 'generate',
+    // const resetBtn = this.folderGenerate.addButton({
+    //   title: 'randomize',
+    //   label: 'generate',
+    // })
+    // resetBtn.on('click', this.randomize)
+
+    const canvas = renderer.domElement
+    canvas.addEventListener('click', () => {
+      if (this.hasStarted) {
+        this.hasStarted = true
+        this.manyFlowers()
+      } else {
+        this.randomize()
+      }
     })
-    resetBtn.on('click', this.randomize)
 
     // test
     // const box = new THREE.Mesh(
