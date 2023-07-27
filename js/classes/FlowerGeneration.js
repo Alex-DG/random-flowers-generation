@@ -85,8 +85,7 @@ class _FlowerGeneration {
 
   ////////////////////////////////////////////////////////////////////////
 
-  randomize() {
-    // remove all children from mesh group
+  clear() {
     if (this.meshGroup && this.meshGroup.children.length) {
       this.meshGroup.children.forEach((child) => {
         child.userData.flowers.length = 0
@@ -95,6 +94,11 @@ class _FlowerGeneration {
         }
       })
     }
+  }
+
+  randomize() {
+    // remove all children from mesh group
+    this.clear()
 
     this.manyFlowers()
   }

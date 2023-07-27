@@ -25,6 +25,7 @@ class _Ground {
     const canvas = renderer.domElement
 
     canvas.addEventListener('touchstart', this.onTouchStart)
+    canvas.addEventListener('touchend', this.onTouchEnd)
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -49,20 +50,37 @@ class _Ground {
   }
 
   onTouchStart(event) {
+    this.touchStartX = event.touches[0].clientX
+
     if (event.touches.length === 1) {
       this.placeObject(event)
     }
   }
 
+  onTouchEnd(event) {
+    // if (!this.touchStartX) return
+
+    const touchEndX = event.changedTouches[0].clientX
+
+    console.log({ touchEndX, touchStartX: this.touchStartX })
+    if (touchEndX - this.touchStartX > window.innerWidth / 2) {
+      FlowerGeneration.clear()
+    }
+
+    this.touchStartX = null // Reset for the next swipe
+  }
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   bind() {
+    this.onTouchEnd = this.onTouchEnd.bind(this)
     this.onTouchStart = this.onTouchStart.bind(this)
   }
 
   init() {
     this.bind()
 
+    this.touchStartX = null
     this.raycaster = new THREE.Raycaster()
     this.tapPosition = new THREE.Vector2()
 
