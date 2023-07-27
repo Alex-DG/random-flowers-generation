@@ -4,10 +4,8 @@ import gsap from 'gsap'
 
 import { MeshLineGeometry, MeshLineMaterial, raycast } from 'meshline'
 
-import { createNoise2D, createNoise3D } from 'simplex-noise'
+import { createNoise2D } from 'simplex-noise'
 import { getRandomSpherePoint } from '../utils/maths'
-
-// import DebugTweakpane from './DebugTweakpane'
 
 const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   return (
@@ -16,7 +14,7 @@ const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   )
 }
 
-class Walker {
+class FlowerPart {
   constructor(config) {
     this.noise2D = config.noise2D
     this.total = config.total
@@ -110,10 +108,10 @@ class _FlowerGeneration {
     this.edge = 8
 
     for (let i = 0; i < this.count; i++) {
-      // setup a new walker/wanderer
+      // setup a new flowerPart
       let centered = Math.random() > 0.5
 
-      let walker = new Walker({
+      let flowerPart = new FlowerPart({
         noise2D: noise2D,
         total: 3000,
         x: centered ? 0 : THREE.MathUtils.randFloat(-1, 1),
@@ -128,11 +126,11 @@ class _FlowerGeneration {
       })
 
       let flowerGeometry = new THREE.BufferGeometry()
-      const positions = new Float32Array(walker.path.length * 3)
+      const positions = new Float32Array(flowerPart.path.length * 3)
 
       // grab each path point and push it to the flowerGeometry
-      for (let j = 0, len = walker.path.length; j < len; j++) {
-        let p = walker.path[j]
+      for (let j = 0, len = flowerPart.path.length; j < len; j++) {
+        let p = flowerPart.path[j]
         let x = p.x
         let y = p.y
         let z = p.z
@@ -159,7 +157,7 @@ class _FlowerGeneration {
             360 * Math.random() + 300 + calcMap(i, 0, this.count, -350, 350)
           }, 100%, ${74}%)`
         ),
-        lineWidth: 0.09,
+        lineWidth: 0.25,
         depthTest: false,
         sizeAttenuation: 1,
         opacity: 1,
@@ -175,11 +173,10 @@ class _FlowerGeneration {
         mesh.rotation.z = calcMap(k, 0, this.stems, 0, Math.PI * 2)
         mesh.rotation.x = -Math.PI / 2
         mesh.position.y = 0
-        mesh.scale.multiplyScalar(0.15)
         mesh.name = `flower-${k}`
-        mesh.castShadow = true
+        // mesh.castShadow = true
+        mesh.scale.set(0, 0, 0)
 
-        // TODO TWEEN on visibility value
         // mesh.material.uniforms.opacity.value = 0
         mesh.material.uniforms.visibility.value = 0
 
@@ -259,7 +256,7 @@ class _FlowerGeneration {
     stemLineMaterial.uniforms.visibility.value = 0
 
     const stem = new THREE.Mesh(lineStemGeometry, stemLineMaterial)
-    stem.castShadow = true
+    // stem.castShadow = true
     stem.name = 'stem'
 
     flowerGroup.add(stem)
@@ -269,7 +266,7 @@ class _FlowerGeneration {
   grow(flowers, stem, growHeight, growSpeed) {
     gsap.to(stem.material.uniforms.visibility, {
       value: 1,
-      duration: growSpeed - growSpeed / 10,
+      duration: growSpeed - growHeight / growSpeed,
       ease: 'power3.out',
     })
 
@@ -278,14 +275,21 @@ class _FlowerGeneration {
         value: 1,
         duration: 10,
         ease: 'power3.out',
-        onComplete: () => {
-          f.material.depthTest = true
-        },
+        // onComplete: () => {
+        //   f.material.depthTest = true
+        // },
       })
 
       gsap.to(f.position, {
         y: growHeight,
         duration: growSpeed,
+        ease: 'power3.out',
+      })
+      gsap.to(f.scale, {
+        x: 0.15,
+        y: 0.15,
+        z: 0.15,
+        duration: growSpeed + 0.5,
         ease: 'power3.out',
       })
     })
@@ -330,35 +334,28 @@ class _FlowerGeneration {
     this.scene = scene
     this.scene.add(this.meshGroup)
 
-    // this.folderGenerate = DebugTweakpane.addFolder({ title: 'Flower' })
-
     await this.setupTexture()
 
-    // this.manyFlowers()
-
-    // const resetBtn = this.folderGenerate.addButton({
-    //   title: 'randomize',
-    //   label: 'generate',
+    // const canvas = renderer.domElement
+    // canvas.addEventListener('click', () => {
+    //   if (this.hasStarted) {
+    //     this.hasStarted = true
+    //     this.manyFlowers()
+    //   } else {
+    //     this.randomize()
+    //   }
     // })
-    // resetBtn.on('click', this.randomize)
+  }
 
-    const canvas = renderer.domElement
-    canvas.addEventListener('click', () => {
-      if (this.hasStarted) {
-        this.hasStarted = true
-        this.manyFlowers()
-      } else {
-        this.randomize()
-      }
-    })
+  add(point, length = THREE.MathUtils.randInt(3, 10)) {
+    for (let i = 0; i < length; i++) {
+      const flowerGroup = this.generate()
+      const spherePoint = getRandomSpherePoint(point, 5)
 
-    // test
-    // const box = new THREE.Mesh(
-    //   new THREE.BoxGeometry(1, 1, 1),
-    //   new THREE.MeshNormalMaterial()
-    // )
-    // box.position.set(0, 0, 0)
-    // this.meshGroup.add(box)
+      const position = new THREE.Vector3(spherePoint.x, 0, spherePoint.z)
+
+      flowerGroup.position.copy(position)
+    }
   }
 
   manyFlowers(length = THREE.MathUtils.randInt(3, 10)) {
