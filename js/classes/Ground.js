@@ -58,11 +58,8 @@ class _Ground {
   }
 
   onTouchEnd(event) {
-    // if (!this.touchStartX) return
-
     const touchEndX = event.changedTouches[0].clientX
 
-    console.log({ touchEndX, touchStartX: this.touchStartX })
     if (touchEndX - this.touchStartX > window.innerWidth / 2) {
       FlowerGeneration.clear()
     }

@@ -6,6 +6,7 @@ import { MeshLineGeometry, MeshLineMaterial, raycast } from 'meshline'
 
 import { createNoise2D } from 'simplex-noise'
 import { getRandomSpherePoint } from '../utils/maths'
+import Butterflies from './Butterflies'
 
 const calcMap = (value, inputMin, inputMax, outputMin, outputMax) => {
   return (
@@ -107,9 +108,9 @@ class _FlowerGeneration {
     const flowers = []
     const noise2D = createNoise2D()
 
-    this.count = 8
+    this.count = 6
     this.stems = 8
-    this.edge = 8
+    this.edge = 0
 
     for (let i = 0; i < this.count; i++) {
       // setup a new flowerPart
@@ -117,15 +118,15 @@ class _FlowerGeneration {
 
       let flowerPart = new FlowerPart({
         noise2D: noise2D,
-        total: 3000,
+        total: 2800,
         x: centered ? 0 : THREE.MathUtils.randFloat(-1, 1),
         y: centered ? 0 : THREE.MathUtils.randFloat(-1, 1),
         dir: (i / this.count) * ((Math.PI * 2) / this.stems),
         speed: 0,
-        delta: 0.0003,
-        angleRange: 0.01,
+        delta: 0.00032,
+        angleRange: 0.012,
         away: 0,
-        depth: 6,
+        depth: 7,
         time: i * 1000,
       })
 
@@ -161,7 +162,7 @@ class _FlowerGeneration {
             360 * Math.random() + 300 + calcMap(i, 0, this.count, -350, 350)
           }, 100%, ${74}%)`
         ),
-        lineWidth: 0.25,
+        lineWidth: 0.15,
         depthTest: false,
         sizeAttenuation: 1,
         opacity: 1,
@@ -270,7 +271,7 @@ class _FlowerGeneration {
   grow(flowers, stem, growHeight, growSpeed) {
     gsap.to(stem.material.uniforms.visibility, {
       value: 1,
-      duration: growSpeed - growHeight / growSpeed,
+      duration: growSpeed - growSpeed / growHeight,
       ease: 'power3.out',
     })
 
@@ -279,9 +280,6 @@ class _FlowerGeneration {
         value: 1,
         duration: 10,
         ease: 'power3.out',
-        // onComplete: () => {
-        //   f.material.depthTest = true
-        // },
       })
 
       gsap.to(f.position, {
@@ -311,6 +309,8 @@ class _FlowerGeneration {
     this.grow(flowers, stem, growHeight, growSpeed)
 
     flowerGroup.userData.flowers = flowers
+    flowerGroup.userData.growHeight = growHeight
+    flowerGroup.userData.speed = THREE.MathUtils.randFloat(0.1, 2)
 
     this.meshGroup.add(flowerGroup)
 
@@ -351,15 +351,27 @@ class _FlowerGeneration {
     // })
   }
 
-  add(point, length = THREE.MathUtils.randInt(3, 10)) {
+  add(point, length = THREE.MathUtils.randInt(1, 3)) {
+    let isButterflyAdded = false
+
     for (let i = 0; i < length; i++) {
       const flowerGroup = this.generate()
-      const spherePoint = getRandomSpherePoint(point, 5)
+      const spherePoint = getRandomSpherePoint(point, length + 1)
+
+      if (!isButterflyAdded && Math.random() < 0.5) {
+        isButterflyAdded = true
+
+        // 50% chance of creating a butterfly
+        point.y = flowerGroup.userData.growHeight
+        Butterflies.create(point)
+      }
 
       const position = new THREE.Vector3(spherePoint.x, 0, spherePoint.z)
 
       flowerGroup.position.copy(position)
     }
+
+    isButterflyAdded = false
   }
 
   manyFlowers(length = THREE.MathUtils.randInt(3, 10)) {
@@ -380,13 +392,11 @@ class _FlowerGeneration {
     }
   }
 
-  update() {
-    const time = performance.now() / 1000
-
+  update(elapsedTime) {
     if (this.meshGroup) {
       this.meshGroup.children.forEach((child) => {
         child.rotation.y += 0.005
-        child.position.y = Math.sin(time) * 0.1
+        child.position.y = Math.sin(elapsedTime * child.userData.speed) * 0.1
       })
     }
   }

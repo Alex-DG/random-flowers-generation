@@ -41,13 +41,13 @@ class _ParticlesSystem {
   }
 
   init(options) {
-    this.options = options?.count || { count: 150 }
+    this.options = options?.count || { count: 125 }
     this.setInstance()
   }
 
-  update() {
+  update(elapsedTime) {
     if (this.particleMaterial) {
-      this.particleMaterial.uniforms.uTime.value = performance.now()
+      this.particleMaterial.uniforms.uTime.value = elapsedTime
     }
   }
 }

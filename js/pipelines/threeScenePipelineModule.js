@@ -44,8 +44,8 @@ export const initThreeScenePipelineModule = () => {
     // renderer.toneMapping = THREE.ACESFilmicToneMapping
     // renderer.toneMappingExposure = 1.72
 
-    renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    // renderer.shadowMap.enabled = true
+    // renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
     // XR Scene Data
     const xrSceneData = { scene, camera, renderer }
