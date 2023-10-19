@@ -1,6 +1,12 @@
 # { AR 8thWall ~ Three.js } Random Flowers Generation 🌸
 
+## Demo
+
+[video](https://www.youtube.com/watch?v=JNe6ES_LFJQ)
+
 ## Description
+
+- Procedural flowers generation in WebAR
 
 ## Setup
 
